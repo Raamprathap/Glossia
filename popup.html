@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Glossia</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+
+  <body>
+    <!-- ===================== MAIN VIEW ===================== -->
+    <div class="view" id="mainView">
+      <!-- Top bar -->
+      <div class="topbar">
+        <div class="brand">
+          <span class="brand-dot"></span>
+          <span class="brand-name">Glossia</span>
+        </div>
+        <div class="topbar-right">
+          <div class="status-chip" id="statusChip">
+            <span class="chip-dot"></span>
+            <span id="chipLabel">Scanning…</span>
+          </div>
+          <button
+            class="icon-btn"
+            id="openSettings"
+            title="Settings"
+            aria-label="Open settings"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Avatar zone -->
+      <div class="avatar-zone">
+        <iframe
+          class="popup-avatar-frame"
+          id="popupAvatarFrame"
+          src="http://localhost:5000/avatar/avatarnew.html"
+          title="Sign language avatar"
+          allow="autoplay"
+        ></iframe>
+        <!-- Sign transition overlay -->
+        <div class="sign-flash" id="signFlash"></div>
+      </div>
+
+      <!-- Sign info bar -->
+      <div class="sign-bar">
+        <div class="sign-bar-left">
+          <span class="sign-word" id="signWord">—</span>
+          <span class="sign-lang" id="signLang">ASL</span>
+        </div>
+        <div class="conf-pill" id="confPill">
+          <div class="conf-track">
+            <div class="conf-fill" id="confFill"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Caption strip -->
+      <div class="caption-strip" id="captionStrip">
+        <span class="caption-quote">"</span>
+        <span class="caption-body" id="captionBody">Waiting for captions…</span>
+        <span class="caption-quote">"</span>
+      </div>
+
+      <!-- Stats row -->
+      <div class="stats-row">
+        <div class="stat-item">
+          <span class="stat-val" id="statSigns">0</span>
+          <span class="stat-key">Signs</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-item">
+          <span class="stat-val" id="statTime">0:00</span>
+          <span class="stat-key">Session</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-item">
+          <span class="stat-val" id="statPlatform">—</span>
+          <span class="stat-key">Platform</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== SETTINGS VIEW ===================== -->
+    <div class="view hidden" id="settingsView">
+      <div class="topbar">
+        <button class="icon-btn" id="backBtn" title="Back" aria-label="Go back">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <span class="settings-title">Settings</span>
+        <div style="width: 32px"></div>
+      </div>
+
+      <div class="settings-body">
+        <!-- Master toggle -->
+        <div class="s-section">
+          <div class="s-row flat">
+            <div class="s-label-group">
+              <span class="s-label">Enable overlay</span>
+              <span class="s-hint">Show sign widget on video pages</span>
+            </div>
+            <label class="sw">
+              <input type="checkbox" id="masterToggle" checked />
+              <span class="sw-track"><span class="sw-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="s-divider"></div>
+
+        <!-- Appearance -->
+        <div class="s-section">
+          <p class="s-section-label">Appearance</p>
+
+          <div class="s-row">
+            <span class="s-label">Widget position</span>
+            <div class="pos-grid" id="posGrid">
+              <button class="pos-cell" data-pos="top-left">↖</button>
+              <button class="pos-cell" data-pos="top-right">↗</button>
+              <button class="pos-cell active" data-pos="bottom-right">↘</button>
+              <button class="pos-cell" data-pos="bottom-left">↙</button>
+            </div>
+          </div>
+
+          <div class="s-row">
+            <span class="s-label">Size</span>
+            <div class="seg" id="sizeSelector">
+              <button class="seg-btn" data-size="small">Small</button>
+              <button class="seg-btn active" data-size="medium">Medium</button>
+              <button class="seg-btn" data-size="large">Large</button>
+            </div>
+          </div>
+
+          <div class="s-row flat">
+            <div class="s-label-group">
+              <span class="s-label">Show avatar</span>
+              <span class="s-hint">Display sign animation in widget</span>
+            </div>
+            <label class="sw">
+              <input type="checkbox" id="avatarToggle" checked />
+              <span class="sw-track"><span class="sw-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="s-divider"></div>
+
+        <!-- Language -->
+        <div class="s-section">
+          <p class="s-section-label">Sign Language</p>
+
+          <div class="s-row flat">
+            <span class="s-label">Language</span>
+            <select class="s-select" id="langSelect">
+              <option value="ASL">ASL – American</option>
+              <option value="BSL">BSL – British</option>
+              <option value="ISL">ISL – Indian</option>
+              <option value="Auslan">Auslan</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="s-divider"></div>
+
+        <!-- Captions -->
+        <div class="s-section">
+          <p class="s-section-label">Captions</p>
+
+          <div class="s-row flat">
+            <div class="s-label-group">
+              <span class="s-label">Auto-detect captions</span>
+              <span class="s-hint">Read subtitles from the page</span>
+            </div>
+            <label class="sw">
+              <input type="checkbox" id="captionToggle" checked />
+              <span class="sw-track"><span class="sw-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

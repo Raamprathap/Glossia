@@ -1,0 +1,24 @@
+{
+  "description"     : "========  CWASA client configuration data. Server version  ========",
+  "jasBase"          : "/avatar/remote/",
+
+  "avSettings" : [
+    {
+      "width":            374,
+      "height":           203,
+      "avList":           "avsfull",
+      "initAv":           "marc",
+      "initSiGMLURL":     "scotland-H.sigml"
+    },
+    {
+      "width":            228,
+      "height":           208,
+      "background":       "Salmon",
+      "avList":           "avs",
+      "initAv":           "francoise",
+      "allowFrameSteps":  false,
+      "allowSiGMLText":   false,
+      "initSiGMLURL":     "welkom-ngt.sigml"
+    }
+  ]
+}

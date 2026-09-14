@@ -1,0 +1,601 @@
+/* ===================================================
+   Glossia – Popup Styles
+   White + Slate/Teal. Clean, modern, professional.
+   =================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---- Design Tokens ---- */
+:root {
+  /* Backgrounds */
+  --bg: #ffffff;
+  --surface: #f8fafc;
+  /* slate-50 */
+  --surface2: #f1f5f9;
+  /* slate-100 */
+
+  /* Borders */
+  --border: #e2e8f0;
+  /* slate-200 */
+  --border2: #cbd5e1;
+  /* slate-300 */
+
+  /* Text */
+  --text: #0f172a;
+  /* slate-900 */
+  --text2: #64748b;
+  /* slate-500 */
+  --text3: #94a3b8;
+  /* slate-400 */
+
+  /* Accent: teal — fresh, accessible, professional */
+  --accent: #0d9488;
+  /* teal-600 */
+  --accent-hover: #0f766e;
+  /* teal-700 */
+  --accent-bg: rgba(13, 148, 136, 0.07);
+  --accent-mid: rgba(13, 148, 136, 0.18);
+
+  /* Status green */
+  --green: #059669;
+  /* emerald-600 */
+  --green-bg: rgba(5, 150, 105, 0.08);
+  --green-border: rgba(5, 150, 105, 0.2);
+
+  /* Shape */
+  --r-lg: 14px;
+  --r-md: 10px;
+  --r-sm: 7px;
+  --r-xs: 5px;
+
+  --w: 320px;
+}
+
+html,
+body {
+  width: var(--w);
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ---- Views ---- */
+.view {
+  width: var(--w);
+  animation: fadein 0.18s ease;
+}
+
+.view.hidden {
+  display: none;
+}
+
+@keyframes fadein {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---- Topbar ---- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 46px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+.brand-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Status chip */
+.status-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 100px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text2);
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s;
+}
+
+.status-chip.active {
+  background: var(--green-bg);
+  border-color: var(--green-border);
+  color: var(--green);
+}
+
+.chip-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.status-chip.active .chip-dot {
+  animation: blink 1.8s ease infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* Icon button */
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover {
+  background: var(--surface2);
+  color: var(--accent);
+  border-color: var(--accent-mid);
+}
+
+/* ---- Avatar Zone ---- */
+.avatar-zone {
+  position: relative;
+  width: 100%;
+  height: 256px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.popup-avatar-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--surface);
+}
+
+/* Flash on sign change */
+.sign-flash {
+  position: absolute;
+  inset: 0;
+  background: var(--accent-bg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sign-flash.flash {
+  opacity: 1;
+  animation: flash-out 0.35s ease forwards;
+}
+
+@keyframes flash-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+/* ---- Sign Bar ---- */
+.sign-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.sign-bar-left {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.sign-word {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  transition: opacity 0.15s;
+}
+
+.sign-lang {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 2px 6px;
+  border-radius: var(--r-xs);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-mid);
+}
+
+.conf-pill {
+  display: flex;
+  align-items: center;
+}
+
+.conf-track {
+  width: 60px;
+  height: 3px;
+  border-radius: 100px;
+  background: var(--border2);
+  overflow: hidden;
+}
+
+.conf-fill {
+  height: 100%;
+  border-radius: 100px;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---- Caption Strip ---- */
+.caption-strip {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  min-height: 38px;
+  background: var(--bg);
+}
+
+.caption-quote {
+  font-size: 15px;
+  color: var(--border2);
+  line-height: 1;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.caption-body {
+  font-size: 11.5px;
+  color: var(--text2);
+  line-height: 1.5;
+  font-style: italic;
+  flex: 1;
+}
+
+/* ---- Stats Row ---- */
+.stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 10px 16px;
+  background: var(--bg);
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ph-hand {
+  width: 90px;
+  height: auto;
+  animation: float 3s ease-in-out infinite;
+  filter: drop-shadow(0 8px 24px rgba(13, 148, 136, 0.22));
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.stat-val {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.stat-key {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.stat-sep {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+}
+
+/* ================================================================
+   SETTINGS VIEW
+   ================================================================ */
+
+.settings-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.settings-body {
+  padding: 4px 0 10px;
+  background: var(--bg);
+}
+
+.s-section {
+  padding: 2px 0;
+}
+
+.s-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+  padding: 8px 16px 3px;
+}
+
+.s-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 16px;
+  gap: 12px;
+}
+
+.s-row.flat {
+  align-items: center;
+}
+
+.s-label {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.s-label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.s-hint {
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.s-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 3px 0;
+}
+
+/* Toggle Switch */
+.sw {
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sw input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.sw-track {
+  display: block;
+  width: 38px;
+  height: 21px;
+  border-radius: 100px;
+  background: var(--border2);
+  border: 1px solid var(--border2);
+  position: relative;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+
+.sw-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.sw input:checked + .sw-track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.sw input:checked + .sw-track .sw-thumb {
+  transform: translateX(17px);
+}
+
+/* Position grid */
+.pos-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 30px);
+  grid-template-rows: repeat(2, 26px);
+  gap: 3px;
+}
+
+.pos-cell {
+  border-radius: var(--r-xs);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text3);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.pos-cell:hover {
+  background: var(--surface2);
+  color: var(--text2);
+  border-color: var(--border2);
+}
+
+.pos-cell.active {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+/* Segmented control */
+.seg {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.seg-btn {
+  flex: 1;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  transition: all 0.15s;
+  border-right: 1px solid var(--border);
+}
+
+.seg-btn:last-child {
+  border-right: none;
+}
+
+.seg-btn.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.seg-btn:hover:not(.active) {
+  color: var(--text);
+  background: var(--surface2);
+}
+
+/* Select */
+.s-select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  color: var(--text);
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  padding: 5px 8px;
+  cursor: pointer;
+  outline: none;
+  max-width: 155px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.s-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+.s-select option {
+  background: #fff;
+  color: var(--text);
+}

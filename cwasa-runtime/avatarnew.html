@@ -1,0 +1,361 @@
+<!doctype html>
+<html>
+  <head>
+    <title>ISL : Avatar Page</title>
+    <meta http-equiv="Access-Control-Allow-Origin" content="*" />
+    <meta http-equiv="Access-Control-Allow-Methods" content="GET" />
+    <link rel="stylesheet" href="css/cwasa.css" />
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+    />
+    <script>
+      // Compatibility alias used by this CWASA bundle's H-SiGML error path.
+      window.weblog = function (message) {
+        console.warn("[CWASA]", message);
+      };
+    </script>
+    <script type="text/javascript" src="avatar_files/allcsa.js"></script>
+    <script src="https://www.google.com/jsapi" type="text/javascript"></script>
+    <style>
+      .divCtrlPanel {
+        display: none !important;
+      }
+    </style>
+  </head>
+
+  <body onload="CWASA.init()">
+    <div class="container" id="avatar_wrapper" style="display: none">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="CWASAPanel av0" align="center">
+            <div class="divAv av0">
+              <canvas
+                class="canvasAv av0"
+                ondragstart="return false;"
+                width="374"
+                height="203"
+              ></canvas>
+            </div>
+          </div>
+          <div id="currentWord" class="alert alert-warning"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="js/hindiconvert.js"></script>
+    <script>
+      var SigmlData = [];
+      var lookup = {};
+      var playbackGeneration = 0;
+      var dictionaryReady = false;
+      var pendingText = null;
+      var transcriptDebounceTimer = null;
+      var latestTranscript = null;
+      var WORD_DELAY_MS = 2000;
+      var CHARACTER_DELAY_MS = 1000;
+      var signQueue = [];
+      var signPlaying = false;
+
+      function finishQueuedSign(request) {
+        var startedAt = Date.now();
+
+        function checkStatus() {
+          var statusElement = document.querySelector(".statusExtra.av0");
+          var status = statusElement ? statusElement.value : "";
+          var finished =
+            status.indexOf("Playing complete") !== -1 ||
+            status.indexOf("SiGML invalid") !== -1 ||
+            status.indexOf("No signs available") !== -1;
+          var minimumTimeElapsed = Date.now() - startedAt >= 500;
+          var timeout = Date.now() - startedAt >= 5000;
+
+          if ((finished && minimumTimeElapsed) || timeout) {
+            if (timeout && !finished) {
+              logAvatarEvent("CWASA completion timeout; releasing queue", {
+                label: request.label,
+                status,
+              });
+            }
+            signPlaying = false;
+            if (request.onDone) request.onDone();
+            processSignQueue();
+            return;
+          }
+
+          setTimeout(checkStatus, 100);
+        }
+
+        checkStatus();
+      }
+
+      function logAvatarEvent(message, details) {
+        if (details === undefined) {
+          console.log(`[Avatar] ${message}`);
+        } else {
+          console.log(`[Avatar] ${message}`, details);
+        }
+      }
+
+      // Function to get URL parameters
+      function getUrlParameter(name) {
+        name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+        var regex = new RegExp("[\\?&]" + name + "=([^&#]*)");
+        var results = regex.exec(location.search);
+        return results === null
+          ? ""
+          : decodeURIComponent(results[1].replace(/\+/g, " "));
+      }
+
+      function processSignQueue() {
+        if (signPlaying || signQueue.length === 0) return;
+
+        var request = signQueue.shift();
+        if (request.generation !== playbackGeneration) {
+          processSignQueue();
+          return;
+        }
+
+        signPlaying = true;
+        logAvatarEvent("Sending SiGML to CWASA", {
+          label: request.label,
+          length: request.sign.length,
+          sigml: request.sign,
+        });
+
+        try {
+          var result = CWASA.playSiGMLText(request.sign, 0);
+          if (result && typeof result.catch === "function") {
+            result.catch(function (error) {
+              console.error("[Avatar] CWASA playback rejected", {
+                label: request.label,
+                error,
+              });
+            });
+          }
+        } catch (error) {
+          console.error("[Avatar] CWASA playback threw", {
+            label: request.label,
+            error,
+          });
+        }
+
+        finishQueuedSign(request);
+      }
+
+      function queueSiGML(sign, label, generation, delay, onDone) {
+        if (
+          typeof CWASA === "undefined" ||
+          typeof CWASA.playSiGMLText !== "function"
+        ) {
+          console.error("[Avatar] CWASA.playSiGMLText is unavailable");
+          return;
+        }
+
+        signQueue.push({ sign, label, generation, delay, onDone });
+        processSignQueue();
+      }
+
+      // Function to play avatar animation
+      function playAvatarText(text) {
+        if (!text) {
+          logAvatarEvent("Ignoring empty transcript");
+          return;
+        }
+
+        playbackGeneration++;
+        const generation = playbackGeneration;
+        var words = text
+          .replace(/[\u200B-\u200D\uFEFF]/g, "")
+          .trim()
+          .split(/\s+/);
+
+        logAvatarEvent("Converting transcript", {
+          text,
+          words,
+          dictionaryEntries: Object.keys(lookup).length,
+        });
+
+        function playNext(i) {
+          if (generation !== playbackGeneration) return;
+          if (i >= words.length) {
+            setTimeout(() => $("#currentWord").text(""), WORD_DELAY_MS);
+            return;
+          }
+
+          var word = words[i].toLowerCase();
+          if (lookup[word]) {
+            logAvatarEvent("Dictionary match", word);
+            queueSiGML(
+              lookup[word],
+              word,
+              generation,
+              WORD_DELAY_MS,
+              function () {
+                playNext(i + 1);
+              },
+            );
+          } else {
+            logAvatarEvent("No word match; spelling characters", word);
+            let chars = word.split("");
+            let charIndex = 0;
+
+            function playChar() {
+              if (generation !== playbackGeneration) return;
+              if (charIndex >= chars.length) {
+                playNext(i + 1);
+                return;
+              }
+
+              let char = chars[charIndex];
+              if (lookup[char]) {
+                logAvatarEvent("Character match", { word, char });
+                queueSiGML(
+                  lookup[char],
+                  `${word}[${charIndex}] = ${char}`,
+                  generation,
+                  CHARACTER_DELAY_MS,
+                  function () {
+                    charIndex++;
+                    playChar();
+                  },
+                );
+              } else {
+                logAvatarEvent("Character missing from dictionary", {
+                  word,
+                  char,
+                });
+                charIndex++;
+                playChar();
+              }
+            }
+
+            playChar();
+          }
+        }
+
+        playNext(0);
+      }
+
+      $(document).ready(function () {
+        window.addEventListener("message", function (event) {
+          if (event.data && event.data.type === "PLAY_TEXT") {
+            logAvatarEvent("Transcript received", {
+              origin: event.origin,
+              sourceIsParent: event.source === window.parent,
+              sourceIsOpener: event.source === window.opener,
+              text: event.data.text,
+              dictionaryReady,
+            });
+          }
+          const isTrustedSender =
+            event.source === window ||
+            event.source === window.parent ||
+            event.source === window.opener;
+          if (
+            !isTrustedSender ||
+            !event.data ||
+            event.data.type !== "PLAY_TEXT"
+          )
+            return;
+          if (!dictionaryReady) {
+            pendingText = event.data.text;
+            return;
+          }
+
+          latestTranscript = event.data.text;
+          clearTimeout(transcriptDebounceTimer);
+          logAvatarEvent("Stabilizing transcript before playback", {
+            text: latestTranscript,
+            delayMs: 350,
+          });
+          transcriptDebounceTimer = setTimeout(function () {
+            const stableText = latestTranscript;
+            latestTranscript = null;
+            logAvatarEvent("Playing stable transcript", stableText);
+            playAvatarText(stableText);
+          }, 350);
+        });
+
+        const waitForAvatar = setInterval(function () {
+          if (typeof TUavatarLoaded !== "undefined" && TUavatarLoaded) {
+            clearInterval(waitForAvatar);
+            $("#avatar_wrapper").show();
+            $("divCtrlPanel").hide();
+            if (window.opener && !window.opener.closed) {
+              window.opener.postMessage({ type: "AVATAR_READY" }, "*");
+            }
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage({ type: "AVATAR_READY" }, "*");
+            }
+
+            // Check for URL parameter and auto-play
+            const urlText = getUrlParameter("text");
+            if (urlText) {
+              $("#engtext").val(urlText);
+              setTimeout(() => {
+                playAvatarText(urlText);
+              }, 1000); // Give a moment for everything to load
+            } else {
+              $("#urlInfo").show();
+            }
+          }
+        }, 500);
+
+        // Load SiGML JSON
+        $.getJSON("SignFiles/sigmlData.json", function (data) {
+          SigmlData = data;
+          for (let i = 0; i < data.length; i++) {
+            lookup[data[i].w.toLowerCase()] = data[i].s;
+          }
+          dictionaryReady = true;
+          logAvatarEvent("SiGML dictionary loaded", {
+            entries: data.length,
+            keys: Object.keys(lookup).length,
+            hasHello: Boolean(lookup.hello),
+            hasLetters: ["h", "e", "l", "o"].every((key) =>
+              Boolean(lookup[key]),
+            ),
+          });
+          if (pendingText) {
+            const text = pendingText;
+            pendingText = null;
+            latestTranscript = text;
+            clearTimeout(transcriptDebounceTimer);
+            transcriptDebounceTimer = setTimeout(function () {
+              const stableText = latestTranscript;
+              latestTranscript = null;
+              playAvatarText(stableText);
+            }, 350);
+          }
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+          console.error("[Avatar] Failed to load SiGML dictionary", {
+            status: jqXHR.status,
+            textStatus,
+            errorThrown,
+          });
+        });
+
+        // Manual play button
+        $("#playeng").click(function () {
+          var text = $("#engtext").val().trim();
+          playAvatarText(text);
+        });
+
+        // Auto play button (replays current text)
+        $("#autoplay").click(function () {
+          var text = $("#engtext").val().trim();
+          if (!text) {
+            const urlText = getUrlParameter("text");
+            if (urlText) {
+              text = urlText;
+              $("#engtext").val(text);
+            }
+          }
+          playAvatarText(text);
+        });
+      });
+    </script>
+  </body>
+</html>
