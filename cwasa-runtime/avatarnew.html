@@ -14,6 +14,22 @@
       window.weblog = function (message) {
         console.warn("[CWASA]", message);
       };
+
+      // CWASA throws when it gets no WebGL context (GPU acceleration off or
+      // unavailable), leaving a blank avatar; say why instead.
+      function startAvatar() {
+        var canvas = document.createElement("canvas");
+        var gl =
+          canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        if (!gl) {
+          console.error("[Avatar] WebGL is unavailable; see chrome://gpu");
+          document.getElementById("webglError").style.display = "block";
+          return;
+        }
+        var lose = gl.getExtension("WEBGL_lose_context");
+        if (lose) lose.loseContext();
+        CWASA.init();
+      }
     </script>
     <script type="text/javascript" src="avatar_files/allcsa.js"></script>
     <script src="https://www.google.com/jsapi" type="text/javascript"></script>
@@ -24,7 +40,15 @@
     </style>
   </head>
 
-  <body onload="CWASA.init()">
+  <body onload="startAvatar()">
+    <div
+      id="webglError"
+      style="display: none; padding: 12px; font: 13px/1.4 sans-serif; color: #444; text-align: center"
+    >
+      The sign avatar needs WebGL, which this browser has turned off. Check
+      chrome://gpu and make sure "Use graphics acceleration when available" is
+      on in chrome://settings/system.
+    </div>
     <div class="container" id="avatar_wrapper" style="display: none">
       <div class="row">
         <div class="col-md-6">
@@ -44,7 +68,6 @@
     </div>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-    <script src="js/hindiconvert.js"></script>
     <script>
       var SigmlData = [];
       var lookup = {};
@@ -57,6 +80,12 @@
       var CHARACTER_DELAY_MS = 1000;
       var signQueue = [];
       var signPlaying = false;
+      // Live meeting captions (APPEND_TEXT): words wait here to be signed in
+      // order. Speech is faster than signing, so the oldest words are skipped
+      // once the backlog grows past this, keeping the avatar close to live.
+      var MAX_LIVE_BACKLOG_WORDS = 12;
+      var liveWords = [];
+      var liveSigning = false;
 
       function finishQueuedSign(request) {
         var startedAt = Date.now();
@@ -157,6 +186,69 @@
         processSignQueue();
       }
 
+      function splitWords(text) {
+        return text
+          .replace(/[\u200B-\u200D\uFEFF]/g, "")
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean);
+      }
+
+      // Signs one word from the dictionary, or fingerspells it, then calls
+      // onDone. Captions carry punctuation ("everyone," / "today.") that
+      // dictionary keys don't, so it is trimmed from both ends first.
+      function signWord(rawWord, generation, onDone) {
+        var word = rawWord
+          .toLowerCase()
+          .replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+        if (!word) {
+          onDone();
+          return;
+        }
+
+        if (lookup[word]) {
+          logAvatarEvent("Dictionary match", word);
+          queueSiGML(lookup[word], word, generation, WORD_DELAY_MS, onDone);
+          return;
+        }
+
+        logAvatarEvent("No word match; spelling characters", word);
+        let chars = word.split("");
+        let charIndex = 0;
+
+        function playChar() {
+          if (generation !== playbackGeneration) return;
+          if (charIndex >= chars.length) {
+            onDone();
+            return;
+          }
+
+          let char = chars[charIndex];
+          if (lookup[char]) {
+            logAvatarEvent("Character match", { word, char });
+            queueSiGML(
+              lookup[char],
+              `${word}[${charIndex}] = ${char}`,
+              generation,
+              CHARACTER_DELAY_MS,
+              function () {
+                charIndex++;
+                playChar();
+              },
+            );
+          } else {
+            logAvatarEvent("Character missing from dictionary", {
+              word,
+              char,
+            });
+            charIndex++;
+            playChar();
+          }
+        }
+
+        playChar();
+      }
+
       // Function to play avatar animation
       function playAvatarText(text) {
         if (!text) {
@@ -166,10 +258,10 @@
 
         playbackGeneration++;
         const generation = playbackGeneration;
-        var words = text
-          .replace(/[\u200B-\u200D\uFEFF]/g, "")
-          .trim()
-          .split(/\s+/);
+        // A new generation abandons any live words still being signed.
+        liveWords = [];
+        liveSigning = false;
+        var words = splitWords(text);
 
         logAvatarEvent("Converting transcript", {
           text,
@@ -184,67 +276,50 @@
             return;
           }
 
-          var word = words[i].toLowerCase();
-          if (lookup[word]) {
-            logAvatarEvent("Dictionary match", word);
-            queueSiGML(
-              lookup[word],
-              word,
-              generation,
-              WORD_DELAY_MS,
-              function () {
-                playNext(i + 1);
-              },
-            );
-          } else {
-            logAvatarEvent("No word match; spelling characters", word);
-            let chars = word.split("");
-            let charIndex = 0;
-
-            function playChar() {
-              if (generation !== playbackGeneration) return;
-              if (charIndex >= chars.length) {
-                playNext(i + 1);
-                return;
-              }
-
-              let char = chars[charIndex];
-              if (lookup[char]) {
-                logAvatarEvent("Character match", { word, char });
-                queueSiGML(
-                  lookup[char],
-                  `${word}[${charIndex}] = ${char}`,
-                  generation,
-                  CHARACTER_DELAY_MS,
-                  function () {
-                    charIndex++;
-                    playChar();
-                  },
-                );
-              } else {
-                logAvatarEvent("Character missing from dictionary", {
-                  word,
-                  char,
-                });
-                charIndex++;
-                playChar();
-              }
-            }
-
-            playChar();
-          }
+          signWord(words[i], generation, function () {
+            playNext(i + 1);
+          });
         }
 
         playNext(0);
       }
 
+      // Queues words after whatever is already being signed, without
+      // restarting playback (meeting captions arrive a few words at a time).
+      function appendAvatarText(text) {
+        liveWords.push.apply(liveWords, splitWords(text));
+        if (liveWords.length > MAX_LIVE_BACKLOG_WORDS) {
+          var skipped = liveWords.splice(
+            0,
+            liveWords.length - MAX_LIVE_BACKLOG_WORDS,
+          );
+          logAvatarEvent("Live backlog full; skipping older words", skipped);
+        }
+        if (dictionaryReady && !liveSigning) signNextLiveWord();
+      }
+
+      function signNextLiveWord() {
+        const generation = playbackGeneration;
+        if (liveWords.length === 0) {
+          liveSigning = false;
+          return;
+        }
+
+        liveSigning = true;
+        signWord(liveWords.shift(), generation, function () {
+          if (generation === playbackGeneration) signNextLiveWord();
+        });
+      }
+
       $(document).ready(function () {
         window.addEventListener("message", function (event) {
-          if (event.data && event.data.type === "PLAY_TEXT") {
+          const messageType = event.data && event.data.type;
+          if (messageType === "PLAY_TEXT" || messageType === "APPEND_TEXT") {
             logAvatarEvent("Transcript received", {
               origin: event.origin,
               sourceIsParent: event.source === window.parent,
               sourceIsOpener: event.source === window.opener,
+              type: messageType,
               text: event.data.text,
               dictionaryReady,
             });
@@ -253,12 +328,12 @@
             event.source === window ||
             event.source === window.parent ||
             event.source === window.opener;
-          if (
-            !isTrustedSender ||
-            !event.data ||
-            event.data.type !== "PLAY_TEXT"
-          )
+          if (!isTrustedSender || !event.data) return;
+          if (messageType === "APPEND_TEXT") {
+            appendAvatarText(event.data.text || "");
             return;
+          }
+          if (messageType !== "PLAY_TEXT") return;
           if (!dictionaryReady) {
             pendingText = event.data.text;
             return;
@@ -318,6 +393,7 @@
               Boolean(lookup[key]),
             ),
           });
+          if (liveWords.length && !liveSigning) signNextLiveWord();
           if (pendingText) {
             const text = pendingText;
             pendingText = null;

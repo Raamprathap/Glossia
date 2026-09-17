@@ -69,6 +69,14 @@ The extension uses a **glassmorphism dark theme** with:
 5. The floating overlay is updated with the sign animation
 6. The popup polls the content script for live status
 
+### Meetings (Google Meet, Microsoft Teams)
+
+- The overlay appears once you join the call, even with every camera off.
+- Signing is driven by the meeting's own live captions. Glossia turns captions on in Meet automatically (once per call). In Teams, turn them on via **More → Language and speech → Show live captions**.
+- New caption words are signed in order as people speak, instead of restarting on every update. If speech outpaces the avatar, older queued words are skipped so the signing stays close to live.
+- The avatar is embedded through `avatar-host.html`, an extension page. Meeting sites refuse to frame `http://localhost:5000` directly: Teams blocks it with its Content-Security-Policy, and Chrome's Local Network Access check blocks it on other sites unless you allow the permission prompt.
+- The caption selectors live in `MEETING_ADAPTERS` in `content.js`. Meet and Teams change their markup from time to time, so update them there if signing stops while captions are visible.
+
 ---
 
 ## 🧠 Extending

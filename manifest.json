@@ -48,6 +48,7 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "avatar-host.html",
         "overlay.css",
         "avatar.html",
         "cwa/*",
