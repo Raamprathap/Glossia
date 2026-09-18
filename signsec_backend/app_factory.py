@@ -15,6 +15,8 @@ from .routes.conversions import bp as conversions_bp
 from .routes.media import bp as media_bp
 from .routes.admin import bp as admin_bp
 from .routes.legacy_transcript import bp as legacy_transcript_bp
+from .routes.text_to_sign import bp as text_to_sign_bp
+from .text_to_sign.fallback import ModelFallbackChain
 
 
 def create_app() -> Flask:
@@ -47,6 +49,12 @@ def create_app() -> Flask:
 
     # Keep existing functionality available (now will be protected later via RBAC if needed)
     app.register_blueprint(legacy_transcript_bp, url_prefix="/api")
+
+    # Seq2seq models the avatar falls back to when its dictionary keeps missing.
+    app.extensions["text_to_sign"] = ModelFallbackChain(
+        settings.text_to_sign_checkpoint_dir, settings.text_to_sign_model_order
+    )
+    app.register_blueprint(text_to_sign_bp, url_prefix="/api/text-to-sign")
 
     @app.get("/api/health")
     def health():

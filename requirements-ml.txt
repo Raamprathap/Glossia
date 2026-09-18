@@ -1,0 +1,4 @@
+# Optional: the text -> sign model fallback (signsec_backend/text_to_sign).
+# The backend runs without it; the avatar then fingerspells unknown words.
+-r requirements.txt
+torch>=2.1

@@ -65,8 +65,8 @@ The extension uses a **glassmorphism dark theme** with:
 1. **content.js** is injected into every page
 2. It scans for `<video>` elements and identifies the platform
 3. A `MutationObserver` watches for caption/subtitle text changes
-4. Matched keywords are mapped to ASL hand shapes
-5. The floating overlay is updated with the sign animation
+4. Caption text is sent to the CWASA avatar, which signs each word from the sign dictionary or fingerspells it
+5. The floating overlay shows the avatar and a ticker with the sentence being signed
 6. The popup polls the content script for live status
 
 ### Meetings (Google Meet, Microsoft Teams)
@@ -77,11 +77,30 @@ The extension uses a **glassmorphism dark theme** with:
 - The avatar is embedded through `avatar-host.html`, an extension page. Meeting sites refuse to frame `http://localhost:5000` directly: Teams blocks it with its Content-Security-Policy, and Chrome's Local Network Access check blocks it on other sites unless you allow the permission prompt.
 - The caption selectors live in `MEETING_ADAPTERS` in `content.js`. Meet and Teams change their markup from time to time, so update them there if signing stops while captions are visible.
 
+### Model fallback (text → sign)
+
+The dictionary lookup in `cwasa-runtime/avatarnew.html` stays the main converter. Every word it cannot find counts as a failure; after `MODEL_FALLBACK_AFTER_FAILURES` (3) misses in a row, missed words are also sent to `POST /api/text-to-sign`, which asks three seq2seq models for sign glosses, in this order:
+
+1. Transformer encoder-decoder (`signsec_backend/text_to_sign/models/transformer.py`)
+2. LSTM Seq2Seq + Bahdanau attention (`models/lstm_attention.py`)
+3. Vanilla RNN Seq2Seq (`models/rnn_seq2seq.py`)
+
+The first model whose glosses are in the sign dictionary wins; if none helps, the word is fingerspelled as before. A dictionary hit resets the count. The whole flow is described in `signsec_backend/text_to_sign/__init__.py`.
+
+The models are optional and untrained until you train them:
+
+```bash
+pip install -r requirements-ml.txt
+python -m signsec_backend.text_to_sign.train --model all   # writes signsec_backend/text_to_sign/checkpoints/<model>.pt
+```
+
+`data/sample_pairs.tsv` is only a toy set (English, a tab, then glosses) to exercise the pipeline; train on a real English → sign-gloss corpus for useful output. Without PyTorch or checkpoints the endpoint returns 503 and the avatar stops asking. `TEXT_TO_SIGN_CHECKPOINT_DIR` and `TEXT_TO_SIGN_MODEL_ORDER` override the checkpoint folder and model order.
+
 ---
 
 ## 🧠 Extending
 
-To add more signs, edit the `ASL_SIGNS` object in `popup.js` and `ASL_HAND_SHAPES` + `HAND_SVG_PATHS` in `content.js`.
+To add more signs, add gloss → SiGML entries to `cwasa-runtime/SignFiles/sigmlData.json` (UTF-16 encoded).
 
 To add a new platform's captions, append its CSS selector to `CAPTION_SELECTORS` in `content.js`.
 
