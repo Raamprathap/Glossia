@@ -107,3 +107,4 @@ To add a new platform's captions, append its CSS selector to `CAPTION_SELECTORS`
 ---
 
 _Built with ❤️ for accessibility and inclusion._
+# Glossia

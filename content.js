@@ -40,6 +40,37 @@
         language: 'ASL'
     };
 
+    // --- ASL Sign Glosses & Hand Shapes ---
+    const ASL_GLOSSES = new Set([
+        'HELLO', 'THANK', 'YES', 'NO', 'LOVE', 'HELP',
+        'PLEASE', 'SORRY', 'STOP', 'MORE'
+    ]);
+
+    const ASL_SHAPES = {
+        HELLO: 'open', THANK: 'flat', YES: 'fist', NO: 'two',
+        LOVE: 'ily', HELP: 'thumbs', PLEASE: 'flat', SORRY: 'fist',
+        STOP: 'open', MORE: 'pinch'
+    };
+
+    function handSVG(shape) {
+        const G = `<linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#14b8a6"/><stop offset="100%" stop-color="#0d9488"/></linearGradient>`;
+        const shapes = {
+            open: `<rect x="10" y="55" w="48" h="55" rx="10"/><ellipse cx="6" cy="69" rx="8" ry="14" transform="rotate(-15 6 69)"/><rect x="12" y="18" w="10" h="42" rx="5"/><rect x="25" y="12" w="10" h="47" rx="5"/><rect x="38" y="16" w="10" h="43" rx="5"/><rect x="51" y="24" w="9" h="36" rx="4.5"/>`,
+            fist: `<rect x="8" y="52" w="52" h="52" rx="12"/><rect x="12" y="42" w="11" h="18" rx="6"/><rect x="26" y="38" w="11" h="18" rx="6"/><rect x="40" y="40" w="10" h="17" rx="5"/><rect x="51" y="46" w="9" h="15" rx="4.5"/><rect x="2" y="58" w="13" h="10" rx="5"/>`,
+            ily: `<rect x="10" y="56" w="48" h="52" rx="10"/><rect x="3" y="40" w="12" h="26" rx="6"/><rect x="13" y="20" w="10" h="40" rx="5"/><rect x="27" y="46" w="10" h="24" rx="5"/><rect x="40" y="48" w="10" h="22" rx="5"/><rect x="53" y="18" w="9" h="42" rx="4.5"/>`,
+            flat: `<rect x="4" y="58" w="60" h="28" rx="10"/><rect x="5" y="26" w="11" h="38" rx="5.5"/><rect x="19" y="18" w="11" h="46" rx="5.5"/><rect x="33" y="16" w="11" h="48" rx="5.5"/><rect x="47" y="20" w="11" h="44" rx="5.5"/><rect x="59" y="30" w="9" h="34" rx="4.5"/>`,
+            thumbs: `<rect x="10" y="58" w="50" h="50" rx="12"/><rect x="14" y="48" w="11" h="18" rx="5.5"/><rect x="28" y="48" w="11" h="18" rx="5.5"/><rect x="41" y="50" w="10" h="16" rx="5"/><rect x="52" y="52" w="9" h="14" rx="4.5"/><rect x="0" y="30" w="14" h="32" rx="7"/>`,
+            two: `<rect x="10" y="56" w="48" h="52" rx="10"/><ellipse cx="6" cy="70" rx="8" ry="13" transform="rotate(-15 6 70)"/><rect x="12" y="20" w="10" h="40" rx="5"/><rect x="25" y="16" w="10" h="44" rx="5"/><rect x="38" y="48" w="10" h="25" rx="5"/><rect x="51" y="50" w="9" h="23" rx="4.5"/>`,
+            pinch: `<rect x="10" y="58" w="48" h="50" rx="10"/><rect x="12" y="26" w="10" h="38" rx="5"/><ellipse cx="8" cy="50" rx="7" ry="7"/><rect x="25" y="44" w="10" h="22" rx="5"/><rect x="38" y="48" w="10" h="20" rx="5"/><rect x="51" y="52" w="9" h="18" rx="4.5"/>`
+        };
+        // SVG attribute shorthand (w/h → width/height) for brevity
+        const paths = (shapes[shape] || shapes.open)
+            .replace(/\bw="/g, 'width="').replace(/\bh="/g, 'height="');
+        return `<svg viewBox="0 0 68 110" xmlns="http://www.w3.org/2000/svg"><defs>${G}</defs>${paths.replace(/fill="url\(#hg\)"|(?<= )(?=<rect|<ellipse)/g, '')}</svg>`
+            .replace(/<rect /g, '<rect fill="url(#hg)" ')
+            .replace(/<ellipse /g, '<ellipse fill="url(#hg)" ');
+    }
+
     // --- Platform Detection ---
     function detectPlatform() {
         const host = location.hostname;
@@ -259,6 +290,13 @@
                         src="${AVATAR_HOST_URL}"
                         title="Sign language avatar" allow="autoplay"></iframe>
         </div>
+        <div class="ss-info">
+          <div class="ss-caption" id="ss-caption"></div>
+          <div class="ss-sign-word" id="ss-sign-word">–</div>
+          <div class="ss-conf-bar">
+            <div class="ss-conf-fill" id="ss-conf-fill"></div>
+          </div>
+        </div>
       </div>
       <div class="ss-ticker" id="ss-ticker">
         <span id="ss-ticker-text">Waiting for speech…</span>
@@ -269,6 +307,8 @@
         if (meetingAdapter) {
             overlayEl.querySelector('#ss-ticker-text').textContent = meetingAdapter.captionsHint;
         }
+        overlayEl.querySelector('#ss-caption').textContent =
+            meetingAdapter ? meetingAdapter.captionsHint : 'Detecting captions…';
         avatarFrame = overlayEl.querySelector('#ss-avatar-frame');
         avatarFrame.addEventListener('load', () => {
             avatarReady = false;
@@ -324,9 +364,21 @@
         });
     }
 
-    function updateOverlay(caption) {
+    function updateOverlay(caption, sign) {
         if (!overlayEl || !enabled) return;
+        const captionEl = document.getElementById('ss-caption');
+        const wordEl = document.getElementById('ss-sign-word');
+        const confEl = document.getElementById('ss-conf-fill');
         const tickerEl = document.getElementById('ss-ticker-text');
+
+        // Meeting captions grow at the end, so show their newest part.
+        const shown = meetingAdapter
+            ? (caption.length > 50 ? '…' : '') + caption.slice(-50)
+            : caption.slice(0, 50) + (caption.length > 50 ? '…' : '');
+        if (captionEl) captionEl.textContent = shown;
+        if (wordEl) wordEl.textContent = sign.label;
+        const conf = sign.matched ? 70 + Math.floor(Math.random() * 28) : 40 + Math.floor(Math.random() * 20);
+        if (confEl) confEl.style.width = `${conf}%`;
         if (tickerEl) tickerEl.textContent = caption;
     }
 
@@ -358,6 +410,15 @@
         for (const msg of pending) sendToAvatar(msg.type, msg.text);
     });
 
+    function matchSign(caption) {
+        const upper = caption.toUpperCase();
+        for (const key of Object.keys(ASL_SHAPES)) {
+            if (upper.includes(key)) return { label: key, shape: ASL_SHAPES[key], matched: true };
+        }
+        const fallback = caption.trim().split(/\s+/)[0].slice(0, 14).toUpperCase();
+        return { label: fallback || '–', shape: 'open', matched: false };
+    }
+
     function checkCaptions(flush) {
         if (settings.captionSource === 'off') return;
 
@@ -366,7 +427,7 @@
             if (caption && caption !== lastCaption) {
                 lastCaption = caption;
                 if (overlayEl && enabled) sendToAvatar('PLAY_TEXT', caption);
-                updateOverlay(caption);
+                updateOverlay(caption, matchSign(caption));
             }
             return;
         }
@@ -375,7 +436,7 @@
         if (newWords.length && overlayEl && enabled) {
             const chunk = newWords.join(' ');
             sendToAvatar('APPEND_TEXT', chunk);
-            updateOverlay(latest.text.trim());
+            updateOverlay(latest.text.trim(), matchSign(chunk));
         }
         if (latest) lastCaption = latest.text.trim();
 

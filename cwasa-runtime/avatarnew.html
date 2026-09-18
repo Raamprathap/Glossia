@@ -86,6 +86,7 @@
       var MAX_LIVE_BACKLOG_WORDS = 12;
       var liveWords = [];
       var liveSigning = false;
+<<<<<<< HEAD
       // The dictionary (fingerspelling what it lacks) is the main converter.
       // Each missed word counts as a failure; once this many happen in a row,
       // missed words also go to the backend's seq2seq models
@@ -93,6 +94,8 @@
       var MODEL_FALLBACK_AFTER_FAILURES = 3;
       var dictionaryMissStreak = 0;
       var modelFallbackAvailable = true;
+=======
+>>>>>>> f5e608efbbf9a3584c2d38bd0871102b47b9e160
 
       function finishQueuedSign(request) {
         var startedAt = Date.now();
@@ -201,10 +204,16 @@
           .filter(Boolean);
       }
 
+<<<<<<< HEAD
       // Signs one word from the dictionary, or else the model fallback's
       // glosses or fingerspelling, then calls onDone. Captions carry
       // punctuation ("everyone," / "today.") that dictionary keys don't, so it
       // is trimmed from both ends first.
+=======
+      // Signs one word from the dictionary, or fingerspells it, then calls
+      // onDone. Captions carry punctuation ("everyone," / "today.") that
+      // dictionary keys don't, so it is trimmed from both ends first.
+>>>>>>> f5e608efbbf9a3584c2d38bd0871102b47b9e160
       function signWord(rawWord, generation, onDone) {
         var word = rawWord
           .toLowerCase()
@@ -215,12 +224,16 @@
         }
 
         if (lookup[word]) {
+<<<<<<< HEAD
           dictionaryMissStreak = 0;
+=======
+>>>>>>> f5e608efbbf9a3584c2d38bd0871102b47b9e160
           logAvatarEvent("Dictionary match", word);
           queueSiGML(lookup[word], word, generation, WORD_DELAY_MS, onDone);
           return;
         }
 
+<<<<<<< HEAD
         dictionaryMissStreak++;
         if (
           modelFallbackAvailable &&
@@ -287,6 +300,8 @@
       }
 
       function spellWord(word, generation, onDone) {
+=======
+>>>>>>> f5e608efbbf9a3584c2d38bd0871102b47b9e160
         logAvatarEvent("No word match; spelling characters", word);
         let chars = word.split("");
         let charIndex = 0;
