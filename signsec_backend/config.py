@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import List
 
 
@@ -40,6 +41,10 @@ class Settings:
     # Cryptography
     rsa_key_bits: int
 
+    # Text -> sign model fallback (see text_to_sign/__init__.py)
+    text_to_sign_checkpoint_dir: str
+    text_to_sign_model_order: List[str]
+
     @staticmethod
     def from_env() -> "Settings":
         cors = os.getenv("CORS_ORIGINS", "*").strip()
@@ -59,6 +64,15 @@ class Settings:
             login_max_attempts=int(os.getenv("LOGIN_MAX_ATTEMPTS", "5")),
             login_window_seconds=int(os.getenv("LOGIN_WINDOW_SECONDS", "900")),
             rsa_key_bits=int(os.getenv("RSA_KEY_BITS", "2048")),
+            text_to_sign_checkpoint_dir=os.getenv(
+                "TEXT_TO_SIGN_CHECKPOINT_DIR",
+                str(Path(__file__).resolve().parent / "text_to_sign" / "checkpoints"),
+            ),
+            text_to_sign_model_order=[
+                name.strip()
+                for name in os.getenv("TEXT_TO_SIGN_MODEL_ORDER", "transformer,lstm_attention,rnn").split(",")
+                if name.strip()
+            ],
         )
 
 

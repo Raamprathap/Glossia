@@ -304,6 +304,9 @@
     `;
 
         document.body.appendChild(overlayEl);
+        if (meetingAdapter) {
+            overlayEl.querySelector('#ss-ticker-text').textContent = meetingAdapter.captionsHint;
+        }
         overlayEl.querySelector('#ss-caption').textContent =
             meetingAdapter ? meetingAdapter.captionsHint : 'Detecting captions…';
         avatarFrame = overlayEl.querySelector('#ss-avatar-frame');
