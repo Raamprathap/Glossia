@@ -1,0 +1,294 @@
+/* ============================================================
+   Glossia – Overlay Widget (overlay.css)
+   Frosted white + Slate/Teal accent
+   ============================================================ */
+
+#glossia-overlay {
+  position: fixed;
+  z-index: 2147483647;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 12px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  pointer-events: all;
+
+  width: 340px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid #e2e8f0;
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.06),
+    0 4px 16px rgba(15, 23, 42, 0.09),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+  overflow: hidden;
+  transition:
+    width 0.25s ease,
+    opacity 0.25s ease;
+}
+
+/* Positioning */
+#glossia-overlay[data-pos="bottom-right"] {
+  bottom: 20px;
+  right: 20px;
+}
+
+#glossia-overlay[data-pos="bottom-left"] {
+  bottom: 20px;
+  left: 20px;
+}
+
+#glossia-overlay[data-pos="top-right"] {
+  top: 20px;
+  right: 20px;
+}
+
+#glossia-overlay[data-pos="top-left"] {
+  top: 20px;
+  left: 20px;
+}
+
+/* Size variants */
+#glossia-overlay[data-size="small"] {
+  width: 260px;
+}
+
+#glossia-overlay[data-size="medium"] {
+  width: 340px;
+}
+
+#glossia-overlay[data-size="large"] {
+  width: 430px;
+}
+
+/* Minimized */
+#glossia-overlay.minimized {
+  width: 138px;
+}
+
+#glossia-overlay.minimized .ss-body,
+#glossia-overlay.minimized .ss-ticker {
+  display: none;
+}
+
+/* ---- Header ---- */
+.ss-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px 6px;
+  cursor: grab;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ss-header:active {
+  cursor: grabbing;
+}
+
+.ss-logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ss-logo-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #0d9488;
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.16);
+}
+
+.ss-logo-text {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.ss-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ss-live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #059669;
+  animation: live-blink 2s ease infinite;
+}
+
+@keyframes live-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.ss-minimize-btn,
+.ss-close-btn {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.ss-minimize-btn:hover {
+  background: rgba(13, 148, 136, 0.08);
+  color: #0d9488;
+  border-color: rgba(13, 148, 136, 0.2);
+}
+
+.ss-close-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+/* ---- Body ---- */
+.ss-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+
+/* Avatar wrap */
+.ss-avatar-wrap {
+  flex-shrink: 0;
+  width: 150px;
+  height: 205px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Embedded CWASA avatar */
+#ss-avatar-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #f1f5f9;
+}
+
+#glossia-overlay[data-size="small"] .ss-avatar-wrap {
+  width: 112px;
+  height: 155px;
+}
+
+#glossia-overlay[data-size="large"] .ss-avatar-wrap {
+  width: 210px;
+  height: 285px;
+}
+
+.ss-avatar {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.12s ease;
+  padding: 4px;
+}
+
+.ss-avatar svg {
+  width: 44px;
+  height: auto;
+  filter: drop-shadow(0 2px 4px rgba(13, 148, 136, 0.25));
+}
+
+/* Info */
+.ss-info {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ss-caption {
+  font-size: 9.5px;
+  color: #94a3b8;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+.ss-sign-word {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  min-height: 20px;
+}
+
+.ss-conf-bar {
+  height: 3px;
+  border-radius: 100px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.ss-conf-fill {
+  height: 100%;
+  border-radius: 100px;
+  background: #0d9488;
+  width: 0%;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---- Ticker ---- */
+.ss-ticker {
+  border-top: 1px solid #e2e8f0;
+  padding: 4px 10px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+#ss-ticker-text {
+  display: inline-block;
+  white-space: nowrap;
+  font-size: 9px;
+  color: #94a3b8;
+  letter-spacing: 0.01em;
+  animation: ticker-scroll 16s linear infinite;
+}
+
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(-160%);
+  }
+}

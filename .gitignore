@@ -1,0 +1,43 @@
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment variables and secrets (JWT_SECRET, DATABASE_URL, ...)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Packaged Chrome extension builds
+*.crx
+dist/
+build/
+
+# Node (if tooling is added later)
+node_modules/
+
+# Logs
+*.log
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

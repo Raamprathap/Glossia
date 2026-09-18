@@ -1,0 +1,437 @@
+<!doctype html>
+<html>
+  <head>
+    <title>ISL : Avatar Page</title>
+    <meta http-equiv="Access-Control-Allow-Origin" content="*" />
+    <meta http-equiv="Access-Control-Allow-Methods" content="GET" />
+    <link rel="stylesheet" href="css/cwasa.css" />
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+    />
+    <script>
+      // Compatibility alias used by this CWASA bundle's H-SiGML error path.
+      window.weblog = function (message) {
+        console.warn("[CWASA]", message);
+      };
+
+      // CWASA throws when it gets no WebGL context (GPU acceleration off or
+      // unavailable), leaving a blank avatar; say why instead.
+      function startAvatar() {
+        var canvas = document.createElement("canvas");
+        var gl =
+          canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        if (!gl) {
+          console.error("[Avatar] WebGL is unavailable; see chrome://gpu");
+          document.getElementById("webglError").style.display = "block";
+          return;
+        }
+        var lose = gl.getExtension("WEBGL_lose_context");
+        if (lose) lose.loseContext();
+        CWASA.init();
+      }
+    </script>
+    <script type="text/javascript" src="avatar_files/allcsa.js"></script>
+    <script src="https://www.google.com/jsapi" type="text/javascript"></script>
+    <style>
+      .divCtrlPanel {
+        display: none !important;
+      }
+    </style>
+  </head>
+
+  <body onload="startAvatar()">
+    <div
+      id="webglError"
+      style="display: none; padding: 12px; font: 13px/1.4 sans-serif; color: #444; text-align: center"
+    >
+      The sign avatar needs WebGL, which this browser has turned off. Check
+      chrome://gpu and make sure "Use graphics acceleration when available" is
+      on in chrome://settings/system.
+    </div>
+    <div class="container" id="avatar_wrapper" style="display: none">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="CWASAPanel av0" align="center">
+            <div class="divAv av0">
+              <canvas
+                class="canvasAv av0"
+                ondragstart="return false;"
+                width="374"
+                height="203"
+              ></canvas>
+            </div>
+          </div>
+          <div id="currentWord" class="alert alert-warning"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script>
+      var SigmlData = [];
+      var lookup = {};
+      var playbackGeneration = 0;
+      var dictionaryReady = false;
+      var pendingText = null;
+      var transcriptDebounceTimer = null;
+      var latestTranscript = null;
+      var WORD_DELAY_MS = 2000;
+      var CHARACTER_DELAY_MS = 1000;
+      var signQueue = [];
+      var signPlaying = false;
+      // Live meeting captions (APPEND_TEXT): words wait here to be signed in
+      // order. Speech is faster than signing, so the oldest words are skipped
+      // once the backlog grows past this, keeping the avatar close to live.
+      var MAX_LIVE_BACKLOG_WORDS = 12;
+      var liveWords = [];
+      var liveSigning = false;
+
+      function finishQueuedSign(request) {
+        var startedAt = Date.now();
+
+        function checkStatus() {
+          var statusElement = document.querySelector(".statusExtra.av0");
+          var status = statusElement ? statusElement.value : "";
+          var finished =
+            status.indexOf("Playing complete") !== -1 ||
+            status.indexOf("SiGML invalid") !== -1 ||
+            status.indexOf("No signs available") !== -1;
+          var minimumTimeElapsed = Date.now() - startedAt >= 500;
+          var timeout = Date.now() - startedAt >= 5000;
+
+          if ((finished && minimumTimeElapsed) || timeout) {
+            if (timeout && !finished) {
+              logAvatarEvent("CWASA completion timeout; releasing queue", {
+                label: request.label,
+                status,
+              });
+            }
+            signPlaying = false;
+            if (request.onDone) request.onDone();
+            processSignQueue();
+            return;
+          }
+
+          setTimeout(checkStatus, 100);
+        }
+
+        checkStatus();
+      }
+
+      function logAvatarEvent(message, details) {
+        if (details === undefined) {
+          console.log(`[Avatar] ${message}`);
+        } else {
+          console.log(`[Avatar] ${message}`, details);
+        }
+      }
+
+      // Function to get URL parameters
+      function getUrlParameter(name) {
+        name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+        var regex = new RegExp("[\\?&]" + name + "=([^&#]*)");
+        var results = regex.exec(location.search);
+        return results === null
+          ? ""
+          : decodeURIComponent(results[1].replace(/\+/g, " "));
+      }
+
+      function processSignQueue() {
+        if (signPlaying || signQueue.length === 0) return;
+
+        var request = signQueue.shift();
+        if (request.generation !== playbackGeneration) {
+          processSignQueue();
+          return;
+        }
+
+        signPlaying = true;
+        logAvatarEvent("Sending SiGML to CWASA", {
+          label: request.label,
+          length: request.sign.length,
+          sigml: request.sign,
+        });
+
+        try {
+          var result = CWASA.playSiGMLText(request.sign, 0);
+          if (result && typeof result.catch === "function") {
+            result.catch(function (error) {
+              console.error("[Avatar] CWASA playback rejected", {
+                label: request.label,
+                error,
+              });
+            });
+          }
+        } catch (error) {
+          console.error("[Avatar] CWASA playback threw", {
+            label: request.label,
+            error,
+          });
+        }
+
+        finishQueuedSign(request);
+      }
+
+      function queueSiGML(sign, label, generation, delay, onDone) {
+        if (
+          typeof CWASA === "undefined" ||
+          typeof CWASA.playSiGMLText !== "function"
+        ) {
+          console.error("[Avatar] CWASA.playSiGMLText is unavailable");
+          return;
+        }
+
+        signQueue.push({ sign, label, generation, delay, onDone });
+        processSignQueue();
+      }
+
+      function splitWords(text) {
+        return text
+          .replace(/[\u200B-\u200D\uFEFF]/g, "")
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean);
+      }
+
+      // Signs one word from the dictionary, or fingerspells it, then calls
+      // onDone. Captions carry punctuation ("everyone," / "today.") that
+      // dictionary keys don't, so it is trimmed from both ends first.
+      function signWord(rawWord, generation, onDone) {
+        var word = rawWord
+          .toLowerCase()
+          .replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+        if (!word) {
+          onDone();
+          return;
+        }
+
+        if (lookup[word]) {
+          logAvatarEvent("Dictionary match", word);
+          queueSiGML(lookup[word], word, generation, WORD_DELAY_MS, onDone);
+          return;
+        }
+
+        logAvatarEvent("No word match; spelling characters", word);
+        let chars = word.split("");
+        let charIndex = 0;
+
+        function playChar() {
+          if (generation !== playbackGeneration) return;
+          if (charIndex >= chars.length) {
+            onDone();
+            return;
+          }
+
+          let char = chars[charIndex];
+          if (lookup[char]) {
+            logAvatarEvent("Character match", { word, char });
+            queueSiGML(
+              lookup[char],
+              `${word}[${charIndex}] = ${char}`,
+              generation,
+              CHARACTER_DELAY_MS,
+              function () {
+                charIndex++;
+                playChar();
+              },
+            );
+          } else {
+            logAvatarEvent("Character missing from dictionary", {
+              word,
+              char,
+            });
+            charIndex++;
+            playChar();
+          }
+        }
+
+        playChar();
+      }
+
+      // Function to play avatar animation
+      function playAvatarText(text) {
+        if (!text) {
+          logAvatarEvent("Ignoring empty transcript");
+          return;
+        }
+
+        playbackGeneration++;
+        const generation = playbackGeneration;
+        // A new generation abandons any live words still being signed.
+        liveWords = [];
+        liveSigning = false;
+        var words = splitWords(text);
+
+        logAvatarEvent("Converting transcript", {
+          text,
+          words,
+          dictionaryEntries: Object.keys(lookup).length,
+        });
+
+        function playNext(i) {
+          if (generation !== playbackGeneration) return;
+          if (i >= words.length) {
+            setTimeout(() => $("#currentWord").text(""), WORD_DELAY_MS);
+            return;
+          }
+
+          signWord(words[i], generation, function () {
+            playNext(i + 1);
+          });
+        }
+
+        playNext(0);
+      }
+
+      // Queues words after whatever is already being signed, without
+      // restarting playback (meeting captions arrive a few words at a time).
+      function appendAvatarText(text) {
+        liveWords.push.apply(liveWords, splitWords(text));
+        if (liveWords.length > MAX_LIVE_BACKLOG_WORDS) {
+          var skipped = liveWords.splice(
+            0,
+            liveWords.length - MAX_LIVE_BACKLOG_WORDS,
+          );
+          logAvatarEvent("Live backlog full; skipping older words", skipped);
+        }
+        if (dictionaryReady && !liveSigning) signNextLiveWord();
+      }
+
+      function signNextLiveWord() {
+        const generation = playbackGeneration;
+        if (liveWords.length === 0) {
+          liveSigning = false;
+          return;
+        }
+
+        liveSigning = true;
+        signWord(liveWords.shift(), generation, function () {
+          if (generation === playbackGeneration) signNextLiveWord();
+        });
+      }
+
+      $(document).ready(function () {
+        window.addEventListener("message", function (event) {
+          const messageType = event.data && event.data.type;
+          if (messageType === "PLAY_TEXT" || messageType === "APPEND_TEXT") {
+            logAvatarEvent("Transcript received", {
+              origin: event.origin,
+              sourceIsParent: event.source === window.parent,
+              sourceIsOpener: event.source === window.opener,
+              type: messageType,
+              text: event.data.text,
+              dictionaryReady,
+            });
+          }
+          const isTrustedSender =
+            event.source === window ||
+            event.source === window.parent ||
+            event.source === window.opener;
+          if (!isTrustedSender || !event.data) return;
+          if (messageType === "APPEND_TEXT") {
+            appendAvatarText(event.data.text || "");
+            return;
+          }
+          if (messageType !== "PLAY_TEXT") return;
+          if (!dictionaryReady) {
+            pendingText = event.data.text;
+            return;
+          }
+
+          latestTranscript = event.data.text;
+          clearTimeout(transcriptDebounceTimer);
+          logAvatarEvent("Stabilizing transcript before playback", {
+            text: latestTranscript,
+            delayMs: 350,
+          });
+          transcriptDebounceTimer = setTimeout(function () {
+            const stableText = latestTranscript;
+            latestTranscript = null;
+            logAvatarEvent("Playing stable transcript", stableText);
+            playAvatarText(stableText);
+          }, 350);
+        });
+
+        const waitForAvatar = setInterval(function () {
+          if (typeof TUavatarLoaded !== "undefined" && TUavatarLoaded) {
+            clearInterval(waitForAvatar);
+            $("#avatar_wrapper").show();
+            $("divCtrlPanel").hide();
+            if (window.opener && !window.opener.closed) {
+              window.opener.postMessage({ type: "AVATAR_READY" }, "*");
+            }
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage({ type: "AVATAR_READY" }, "*");
+            }
+
+            // Check for URL parameter and auto-play
+            const urlText = getUrlParameter("text");
+            if (urlText) {
+              $("#engtext").val(urlText);
+              setTimeout(() => {
+                playAvatarText(urlText);
+              }, 1000); // Give a moment for everything to load
+            } else {
+              $("#urlInfo").show();
+            }
+          }
+        }, 500);
+
+        // Load SiGML JSON
+        $.getJSON("SignFiles/sigmlData.json", function (data) {
+          SigmlData = data;
+          for (let i = 0; i < data.length; i++) {
+            lookup[data[i].w.toLowerCase()] = data[i].s;
+          }
+          dictionaryReady = true;
+          logAvatarEvent("SiGML dictionary loaded", {
+            entries: data.length,
+            keys: Object.keys(lookup).length,
+            hasHello: Boolean(lookup.hello),
+            hasLetters: ["h", "e", "l", "o"].every((key) =>
+              Boolean(lookup[key]),
+            ),
+          });
+          if (liveWords.length && !liveSigning) signNextLiveWord();
+          if (pendingText) {
+            const text = pendingText;
+            pendingText = null;
+            latestTranscript = text;
+            clearTimeout(transcriptDebounceTimer);
+            transcriptDebounceTimer = setTimeout(function () {
+              const stableText = latestTranscript;
+              latestTranscript = null;
+              playAvatarText(stableText);
+            }, 350);
+          }
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+          console.error("[Avatar] Failed to load SiGML dictionary", {
+            status: jqXHR.status,
+            textStatus,
+            errorThrown,
+          });
+        });
+
+        // Manual play button
+        $("#playeng").click(function () {
+          var text = $("#engtext").val().trim();
+          playAvatarText(text);
+        });
+
+        // Auto play button (replays current text)
+        $("#autoplay").click(function () {
+          var text = $("#engtext").val().trim();
+          if (!text) {
+            const urlText = getUrlParameter("text");
+            if (urlText) {
+              text = urlText;
+              $("#engtext").val(text);
+            }
+          }
+          playAvatarText(text);
+        });
+      });
+    </script>
+  </body>
+</html>

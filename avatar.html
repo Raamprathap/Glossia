@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Glossia Avatar</title>
+
+    <!-- CWASA CSS – bundled locally (downloaded from UEA vhg2021) -->
+    <link rel="stylesheet" href="cwa/cwasa.css" />
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        background: #f7f7fb;
+        overflow: hidden;
+      }
+
+      #avatar-container {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      /*
+      CWASA renders the avatar canvas inside whatever div has class CWASAAvatar1.
+      We size it to fill our container.
+    */
+      .CWASAAvatar1 {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      /* ── Loading overlay ── */
+      #loading {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #f7f7fb;
+        gap: 8px;
+        pointer-events: none;
+        transition: opacity 0.4s;
+      }
+
+      #loading.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .spinner {
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(13, 148, 136, 0.18);
+        border-top-color: #0d9488;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      .loading-text {
+        font-family: system-ui, sans-serif;
+        font-size: 10px;
+        color: #0d9488;
+        letter-spacing: 0.05em;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* ── Fallback ── */
+      #fallback {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: #a0a0b8;
+        font-family: system-ui, sans-serif;
+        font-size: 10px;
+        text-align: center;
+        padding: 12px;
+        height: 100%;
+      }
+
+      #fallback svg {
+        opacity: 0.5;
+      }
+
+      /* ── Sign label strip ── */
+      #sign-label {
+        position: absolute;
+        bottom: 4px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-family: system-ui, sans-serif;
+        font-size: 9px;
+        color: #0d9488;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      #sign-label.visible {
+        opacity: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="avatar-container">
+      <!--
+      CWASA scans the DOM for divs with class "CWASAAvatar<N>" and renders
+      the WebGL canvas inside them. Class name format is mandatory.
+    -->
+      <div class="CWASAAvatar1"></div>
+
+      <div id="loading">
+        <div class="spinner"></div>
+        <span class="loading-text">Loading avatar…</span>
+      </div>
+
+      <div id="fallback">
+        <!-- Stylised hand icon shown when CWASA can't load -->
+        <svg
+          width="36"
+          height="50"
+          viewBox="0 0 80 110"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect x="18" y="55" width="44" height="48" rx="10" fill="#0d9488" />
+          <rect
+            x="6"
+            y="62"
+            width="15"
+            height="28"
+            rx="7"
+            fill="#0d9488"
+            transform="rotate(-12 6 62)"
+          />
+          <rect x="19" y="16" width="12" height="44" rx="6" fill="#0d9488" />
+          <rect x="34" y="10" width="12" height="50" rx="6" fill="#0d9488" />
+          <rect x="49" y="16" width="11" height="44" rx="5.5" fill="#0d9488" />
+          <rect x="62" y="28" width="10" height="34" rx="5" fill="#0d9488" />
+        </svg>
+        <span id="fallback-msg">Avatar unavailable</span>
+      </div>
+    </div>
+
+    <div id="sign-label"></div>
+
+    <!-- CWASA JavaScript – bundled locally -->
+    <script src="cwa/allcsa.js"></script>
+
+    <script>
+      "use strict";
+
+      // ── DOM refs ────────────────────────────────────────────────────────────
+      const loadingEl = document.getElementById("loading");
+      const fallbackEl = document.getElementById("fallback");
+      const fallbackMsg = document.getElementById("fallback-msg");
+      const signLabelEl = document.getElementById("sign-label");
+
+      // ── State ───────────────────────────────────────────────────────────────
+      let cwasaReady = false;
+      let pendingGloss = null;
+      let fallbackTimer = null;
+
+      // ── Helpers ─────────────────────────────────────────────────────────────
+
+      /**
+       * Build a minimal SiGML XML document for a single ASL gloss word.
+       * CWASA maps gloss strings to pre-recorded sign animations.
+       */
+      function buildSiGML(gloss) {
+        return (
+          `<?xml version="1.0" encoding="UTF-8"?>` +
+          `<sigml xmlns="http://www.vhg.org.uk/hamnosys">` +
+          `<hns_sign gloss="${gloss.toUpperCase()}"/>` +
+          `</sigml>`
+        );
+      }
+
+      function showLoading() {
+        loadingEl.classList.remove("hidden");
+        fallbackEl.style.display = "none";
+      }
+
+      function hideLoading() {
+        loadingEl.classList.add("hidden");
+        if (fallbackTimer) {
+          clearTimeout(fallbackTimer);
+          fallbackTimer = null;
+        }
+      }
+
+      function showFallback(msg) {
+        hideLoading();
+        if (msg) fallbackMsg.textContent = msg;
+        fallbackEl.style.display = "flex";
+      }
+
+      /**
+       * Play a gloss sign on the CWASA avatar.
+       * CWASA.playSiGMLText(sigmlString, avatarIndex)
+       * Avatar index is 0-based to match the CWASAAvatar1 div (index 0).
+       */
+      function playGloss(gloss) {
+        if (!gloss) return;
+        gloss = gloss.trim().toUpperCase();
+
+        if (
+          !cwasaReady ||
+          typeof CWASA === "undefined" ||
+          !CWASA.playSiGMLText
+        ) {
+          pendingGloss = gloss;
+          return;
+        }
+
+        try {
+          const sigml = buildSiGML(gloss);
+          // Real CWASA API: playSiGMLText(text, avatarIndex=0)
+          CWASA.playSiGMLText(sigml, 0);
+
+          signLabelEl.textContent = gloss;
+          signLabelEl.classList.add("visible");
+          setTimeout(() => signLabelEl.classList.remove("visible"), 2000);
+        } catch (e) {
+          console.warn("[Glossia] playGloss error:", e);
+        }
+      }
+
+      // ── CWASA Initialisation ─────────────────────────────────────────────────
+
+      function onAvatarLoaded() {
+        // Called by CWASA hook "avatarloaded" when avatar model is ready
+        if (cwasaReady) return;
+        cwasaReady = true;
+        hideLoading();
+
+        if (pendingGloss) {
+          const g = pendingGloss;
+          pendingGloss = null;
+          // Small delay to let the avatar settle into idle pose
+          setTimeout(() => playGloss(g), 300);
+        }
+      }
+
+      function initCWASA() {
+        if (typeof CWASA === "undefined") {
+          showFallback("CWASA unavailable");
+          return;
+        }
+
+        showLoading();
+
+        try {
+          // Register ready hook BEFORE calling init
+          // "avatarloaded" fires when the avatar mesh + textures are fully loaded
+          CWASA.addHook("avatarloaded", onAvatarLoaded, 0);
+
+          // Init CWASA.
+          // jasBase: where CWASA fetches avatar data (JAR + shader files) from.
+          // This must point to UEA — the model data can't be bundled (not publicly downloadable).
+          CWASA.init({
+            ambIdle: true, // Play idle animation when no sign is running
+            useClientConfig: false, // Don't look for cwaclientcfg.json
+            jasBase: "https://vhg.cmp.uea.ac.uk/tech/jas/vhg2021/",
+            initAv: "anna", // Default avatar character
+            avList: ["anna"],
+          });
+        } catch (initErr) {
+          console.warn("[Glossia] CWASA.init error:", initErr);
+          showFallback("Init failed");
+        }
+
+        // Safety: if avatar never loads after 30s (network issue), show fallback
+        fallbackTimer = setTimeout(() => {
+          if (!cwasaReady) showFallback("Avatar timed out\n(check connection)");
+        }, 30000);
+      }
+
+      // ── postMessage listener ─────────────────────────────────────────────────
+      // Receives: { type: 'SIGN', gloss: 'HELLO' }
+      window.addEventListener("message", function (event) {
+        const data = event.data;
+        if (!data || data.type !== "SIGN") return;
+        playGloss(data.gloss || "");
+      });
+
+      // ── Boot ─────────────────────────────────────────────────────────────────
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initCWASA);
+      } else {
+        initCWASA();
+      }
+    </script>
+  </body>
+</html>

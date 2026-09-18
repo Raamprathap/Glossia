@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1535"/>
+      <stop offset="100%" stop-color="#0d1a2e"/>
+    </linearGradient>
+    <linearGradient id="hand" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c4b5fd"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+  <!-- Glow -->
+  <ellipse cx="64" cy="64" rx="45" ry="45" fill="rgba(167,139,250,0.12)"/>
+  <!-- Hand: ILY shape -->
+  <!-- Palm -->
+  <rect x="34" y="65" width="60" height="52" rx="12" fill="url(#hand)"/>
+  <!-- Thumb -->
+  <rect x="22" y="72" width="16" height="28" rx="8" fill="url(#hand)"/>
+  <!-- Index (up) -->
+  <rect x="36" y="25" width="14" height="46" rx="7" fill="url(#hand)"/>
+  <!-- Middle (down) -->
+  <rect x="53" y="55" width="13" height="22" rx="6.5" fill="url(#hand)"/>
+  <!-- Ring (down) -->
+  <rect x="69" y="57" width="13" height="20" rx="6.5" fill="url(#hand)"/>
+  <!-- Pinky (up) -->
+  <rect x="84" y="22" width="12" height="48" rx="6" fill="url(#hand)"/>
+</svg>
