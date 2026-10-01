@@ -292,7 +292,6 @@
         </div>
         <div class="ss-info">
           <div class="ss-caption" id="ss-caption"></div>
-          <div class="ss-sign-word" id="ss-sign-word">–</div>
           <div class="ss-conf-bar">
             <div class="ss-conf-fill" id="ss-conf-fill"></div>
           </div>
@@ -304,9 +303,6 @@
     `;
 
         document.body.appendChild(overlayEl);
-        if (meetingAdapter) {
-            overlayEl.querySelector('#ss-ticker-text').textContent = meetingAdapter.captionsHint;
-        }
         overlayEl.querySelector('#ss-caption').textContent =
             meetingAdapter ? meetingAdapter.captionsHint : 'Detecting captions…';
         avatarFrame = overlayEl.querySelector('#ss-avatar-frame');
@@ -367,7 +363,6 @@
     function updateOverlay(caption, sign) {
         if (!overlayEl || !enabled) return;
         const captionEl = document.getElementById('ss-caption');
-        const wordEl = document.getElementById('ss-sign-word');
         const confEl = document.getElementById('ss-conf-fill');
         const tickerEl = document.getElementById('ss-ticker-text');
 
@@ -376,7 +371,6 @@
             ? (caption.length > 50 ? '…' : '') + caption.slice(-50)
             : caption.slice(0, 50) + (caption.length > 50 ? '…' : '');
         if (captionEl) captionEl.textContent = shown;
-        if (wordEl) wordEl.textContent = sign.label;
         const conf = sign.matched ? 70 + Math.floor(Math.random() * 28) : 40 + Math.floor(Math.random() * 20);
         if (confEl) confEl.style.width = `${conf}%`;
         if (tickerEl) tickerEl.textContent = caption;

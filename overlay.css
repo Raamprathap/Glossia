@@ -1,6 +1,6 @@
 /* ============================================================
    Glossia – Overlay Widget (overlay.css)
-   White card + Teal gradient header
+   Frosted white + Slate/Teal accent
    ============================================================ */
 
 #glossia-overlay {
@@ -240,15 +240,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.4;
-}
-
-.ss-sign-word {
-  font-size: 18px;
-  font-weight: 600;
-  color: #0f172a;
-  letter-spacing: -0.03em;
-  line-height: 1;
-  min-height: 20px;
 }
 
 .ss-conf-bar {

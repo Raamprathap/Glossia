@@ -15,7 +15,6 @@ const openSettings = document.getElementById('openSettings');
 const backBtn = document.getElementById('backBtn');
 const statusChip = document.getElementById('statusChip');
 const chipLabel = document.getElementById('chipLabel');
-const signWord = document.getElementById('signWord');
 const signLang = document.getElementById('signLang');
 const confFill = document.getElementById('confFill');
 const captionBody = document.getElementById('captionBody');
@@ -208,12 +207,6 @@ function showSign(caption) {
     signFlash.classList.remove('flash');
     void signFlash.offsetWidth;
     signFlash.classList.add('flash');
-
-    signWord.style.opacity = '0';
-    setTimeout(() => {
-        signWord.textContent = matched || caption.slice(0, 14);
-        signWord.style.opacity = '1';
-    }, 100);
 
     captionBody.textContent = caption.length > 60 ? caption.slice(0, 60) + '…' : caption;
     sendTranscriptToPopupAvatar(caption);
