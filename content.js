@@ -46,12 +46,6 @@
         'PLEASE', 'SORRY', 'STOP', 'MORE'
     ]);
 
-    const ASL_SHAPES = {
-        HELLO: 'open', THANK: 'flat', YES: 'fist', NO: 'two',
-        LOVE: 'ily', HELP: 'thumbs', PLEASE: 'flat', SORRY: 'fist',
-        STOP: 'open', MORE: 'pinch'
-    };
-
     function handSVG(shape) {
         const G = `<linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#14b8a6"/><stop offset="100%" stop-color="#0d9488"/></linearGradient>`;
         const shapes = {
@@ -292,21 +286,11 @@
         </div>
         <div class="ss-info">
           <div class="ss-caption" id="ss-caption"></div>
-          <div class="ss-sign-word" id="ss-sign-word">–</div>
-          <div class="ss-conf-bar">
-            <div class="ss-conf-fill" id="ss-conf-fill"></div>
-          </div>
         </div>
-      </div>
-      <div class="ss-ticker" id="ss-ticker">
-        <span id="ss-ticker-text">Waiting for speech…</span>
       </div>
     `;
 
         document.body.appendChild(overlayEl);
-        if (meetingAdapter) {
-            overlayEl.querySelector('#ss-ticker-text').textContent = meetingAdapter.captionsHint;
-        }
         overlayEl.querySelector('#ss-caption').textContent =
             meetingAdapter ? meetingAdapter.captionsHint : 'Detecting captions…';
         avatarFrame = overlayEl.querySelector('#ss-avatar-frame');
@@ -364,22 +348,15 @@
         });
     }
 
-    function updateOverlay(caption, sign) {
+    function updateOverlay(caption) {
         if (!overlayEl || !enabled) return;
         const captionEl = document.getElementById('ss-caption');
-        const wordEl = document.getElementById('ss-sign-word');
-        const confEl = document.getElementById('ss-conf-fill');
-        const tickerEl = document.getElementById('ss-ticker-text');
 
         // Meeting captions grow at the end, so show their newest part.
         const shown = meetingAdapter
             ? (caption.length > 50 ? '…' : '') + caption.slice(-50)
             : caption.slice(0, 50) + (caption.length > 50 ? '…' : '');
         if (captionEl) captionEl.textContent = shown;
-        if (wordEl) wordEl.textContent = sign.label;
-        const conf = sign.matched ? 70 + Math.floor(Math.random() * 28) : 40 + Math.floor(Math.random() * 20);
-        if (confEl) confEl.style.width = `${conf}%`;
-        if (tickerEl) tickerEl.textContent = caption;
     }
 
     // PLAY_TEXT replaces whatever the avatar is signing (video captions show
@@ -410,15 +387,6 @@
         for (const msg of pending) sendToAvatar(msg.type, msg.text);
     });
 
-    function matchSign(caption) {
-        const upper = caption.toUpperCase();
-        for (const key of Object.keys(ASL_SHAPES)) {
-            if (upper.includes(key)) return { label: key, shape: ASL_SHAPES[key], matched: true };
-        }
-        const fallback = caption.trim().split(/\s+/)[0].slice(0, 14).toUpperCase();
-        return { label: fallback || '–', shape: 'open', matched: false };
-    }
-
     function checkCaptions(flush) {
         if (settings.captionSource === 'off') return;
 
@@ -427,7 +395,7 @@
             if (caption && caption !== lastCaption) {
                 lastCaption = caption;
                 if (overlayEl && enabled) sendToAvatar('PLAY_TEXT', caption);
-                updateOverlay(caption, matchSign(caption));
+                updateOverlay(caption);
             }
             return;
         }
@@ -436,7 +404,7 @@
         if (newWords.length && overlayEl && enabled) {
             const chunk = newWords.join(' ');
             sendToAvatar('APPEND_TEXT', chunk);
-            updateOverlay(latest.text.trim(), matchSign(chunk));
+            updateOverlay(latest.text.trim());
         }
         if (latest) lastCaption = latest.text.trim();
 

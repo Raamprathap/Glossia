@@ -1,6 +1,6 @@
 /* ============================================================
    Glossia – Overlay Widget (overlay.css)
-   White card + Teal gradient header
+   Frosted white + Slate/Teal accent
    ============================================================ */
 
 #glossia-overlay {
@@ -71,8 +71,7 @@
   width: 138px;
 }
 
-#glossia-overlay.minimized .ss-body,
-#glossia-overlay.minimized .ss-ticker {
+#glossia-overlay.minimized .ss-body {
   display: none;
 }
 
@@ -233,62 +232,11 @@
 }
 
 .ss-caption {
-  font-size: 9.5px;
-  color: #94a3b8;
-  font-style: italic;
+  font-size: 12px;
+  color: #334155;
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.4;
-}
-
-.ss-sign-word {
-  font-size: 18px;
-  font-weight: 600;
-  color: #0f172a;
-  letter-spacing: -0.03em;
-  line-height: 1;
-  min-height: 20px;
-}
-
-.ss-conf-bar {
-  height: 3px;
-  border-radius: 100px;
-  background: #e2e8f0;
-  overflow: hidden;
-}
-
-.ss-conf-fill {
-  height: 100%;
-  border-radius: 100px;
-  background: #0d9488;
-  width: 0%;
-  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* ---- Ticker ---- */
-.ss-ticker {
-  border-top: 1px solid #e2e8f0;
-  padding: 4px 10px;
-  overflow: hidden;
-  background: #f8fafc;
-}
-
-#ss-ticker-text {
-  display: inline-block;
-  white-space: nowrap;
-  font-size: 9px;
-  color: #94a3b8;
-  letter-spacing: 0.01em;
-  animation: ticker-scroll 16s linear infinite;
-}
-
-@keyframes ticker-scroll {
-  from {
-    transform: translateX(100%);
-  }
-
-  to {
-    transform: translateX(-160%);
-  }
 }
