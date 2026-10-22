@@ -517,6 +517,20 @@ export default function DocsPage() {
 
               <div className="docs-card">
                 <div className="docs-card-icon">
+                  <Sparkles size={20} />
+                </div>
+                <h3>Explainable AI</h3>
+                <p>
+                  Explains model-generated glosses with decoder attention over caption spans and uses Grad-CAM to highlight
+                  the frames that influenced fingerspelling decisions.
+                </p>
+                <div className="docs-card-value">
+                  On-demand diagnostic evidence for more transparent signing.
+                </div>
+              </div>
+
+              <div className="docs-card">
+                <div className="docs-card-icon">
                   <Users size={20} />
                 </div>
                 <h3>User Management</h3>
